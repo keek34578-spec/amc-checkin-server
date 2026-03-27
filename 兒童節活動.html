@@ -1357,7 +1357,7 @@ function showPage(name) {
   if (name === 'leaderboard') renderLeaderboard();
   if (name === 'slot')        { updateSlotUI(); renderSlotHistory(); }
   if (name === 'manage')      { renderClassroomList(); renderTeacherClassroomSelect(); renderTeacherList(); renderStudentList(); renderRecords(); }
-  if (name === 'checkin')     { updateTeacherUI(); renderClassroomSelector(); }
+  if (name === 'checkin')     { updateTeacherUI(); renderClassroomSelector(); renderRecentScans(); }
 }
 
 // ── Checkin page ──
@@ -1461,8 +1461,7 @@ function renderRecentScans() {
   const todayStr = today();
   const recs     = data.records
     .filter(r => r.timestamp && r.timestamp.startsWith(todayStr))
-    .sort((a,b) => b.timestamp.localeCompare(a.timestamp))
-    .slice(0, 10);
+    .sort((a,b) => b.timestamp.localeCompare(a.timestamp));
 
   if (!recs.length) {
     list.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div>今天還沒有小朋友刷卡哦！</div>';
@@ -1470,11 +1469,10 @@ function renderRecentScans() {
   }
 
   list.innerHTML = recs.map(r => {
-    const pts = data.records.filter(x => x.cardId === r.cardId).length;
+    const teacherText = r.teacherName ? ' · ' + r.teacherName + ' 老師' : '';
     return '<div class="scan-item">' +
       '<span class="scan-item-card">' + getEmoji(r.cardId) + ' ' + getDisplayName(r.cardId) + '</span>' +
-      '<span style="color:var(--text2);font-size:12px">' + getClassroomName(r.classroomId) + '</span>' +
-      '<span class="scan-item-pts">🌟 ' + pts + 'pt</span>' +
+      '<span style="color:var(--text2);font-size:12px">' + getClassroomName(r.classroomId) + teacherText + '</span>' +
       '<span class="scan-item-time">' + formatTime(r.timestamp) + '</span>' +
       '</div>';
   }).join('');
