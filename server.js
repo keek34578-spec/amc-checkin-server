@@ -79,7 +79,7 @@ wss.on('connection', ws => {
 
 // ── Helper ─────────────────────────────────────────
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
 }
 
 // ── API: Classrooms ────────────────────────────────

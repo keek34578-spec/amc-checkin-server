@@ -28,6 +28,13 @@ npm start
 預設 port：`3000`，可透過環境變數 `PORT` 覆蓋。
 資料庫路徑預設為 `data.db`，可透過 `DB_PATH` 覆蓋。
 
+### Railway 必要環境變數
+
+| 變數名稱 | 值 | 說明 |
+|----------|----|------|
+| `DB_PATH` | `/data/data.db` | 搭配 Railway Volume 持久化資料庫 |
+| `TZ` | `Asia/Taipei` | 修正伺服器時區，確保時間顯示正確 |
+
 ## API 端點
 
 | 方法 | 路徑 | 說明 |
@@ -73,3 +80,4 @@ npm start
   - 每一筆刷卡以獨立一行呈現（學生姓名、教室、老師、時間），不再顯示歷史總累積點數。
   - 移除 10 筆上限，當天所有刷卡紀錄全數顯示。
   - 從其他頁切回「刷卡」頁時列表自動刷新。
+- **時區修正**：`today()` 改用 `toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' })` 取得台灣日期，避免 UTC 與台灣時間（UTC+8）日期不一致；拉霸中獎時間顯示需同步在 Railway 設定 `TZ=Asia/Taipei` 環境變數。
