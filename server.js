@@ -236,7 +236,7 @@ app.delete('/api/records', (req, res) => {
 });
 
 // ── API: Slot machine ──────────────────────────────
-const MAX_DAILY_WINS      = 50;               // hard safety cap (use cooldown as main rate control)
+const MAX_DAILY_WINS      = 20;               // 13:00–21:00，8 hr × 2-3 次 ≈ 20 份大獎/日
 const COST_PER_PLAY       = 5;
 const WIN_PROBABILITY     = 0.20;             // 20% per pull when cooldown has cleared
 const MIN_WIN_INTERVAL_MS = 20 * 60 * 1000;  // 20-min global cooldown → ~3 wins/hr max
