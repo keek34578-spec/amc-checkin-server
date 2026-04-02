@@ -1210,11 +1210,12 @@ function handleWsMessage({ type, payload }) {
       break;
 
     case 'slot_win':
-      renderSlotHistory();
+    case 'slot_enter':
       if (slotCardId) refreshSlotStatus().then(() => updateSlotUI());
       break;
 
-    case 'slot_play':
+    case 'slot_draw':
+      renderSlotHistory();
       if (slotCardId) refreshSlotStatus().then(() => updateSlotUI());
       break;
   }
@@ -1441,11 +1442,10 @@ async function doScan() {
       timestamp:   ts
     });
 
-    const totalPts    = result.totalPts;
-    const name        = getDisplayName(cardId);
-    const isSlotUnlock = (totalPts % COST_PER_PLAY === 0);
+    const totalPts = result.totalPts;
+    const name     = getDisplayName(cardId);
 
-    showCheckinCard(cardId, name, totalPts, isSlotUnlock);
+    showCheckinCard(cardId, name, totalPts);
     renderRecentScans();
     if (el('page-leaderboard').classList.contains('active')) renderLeaderboard();
     if (input) input.value = '';
@@ -1479,16 +1479,9 @@ function renderRecentScans() {
 }
 
 // ── Full-screen checkin card ──
-function showCheckinCard(cardId, name, totalPts, isSlotUnlock) {
+function showCheckinCard(cardId, name, totalPts) {
   fireConfetti();
-  const bgGrad      = isSlotUnlock
-    ? 'linear-gradient(160deg,#fff8d0,#ffe8b0,#ffd6ee)'
-    : 'linear-gradient(160deg,#e0f8ff,#f0e8ff,#e8fff4)';
-  const stars       = '⭐'.repeat(Math.min(totalPts, 10));
-  const progressPct = (totalPts % COST_PER_PLAY) / COST_PER_PLAY * 100;
-  const ptsToNext   = COST_PER_PLAY - (totalPts % COST_PER_PLAY);
-  const unlockHTML  = isSlotUnlock
-    ? '<div class="cc-unlock">🎰 解鎖拉霸機會！馬上去試試！</div>' : '';
+  const stars = '⭐'.repeat(Math.min(totalPts, 10));
 
   const existing = el('checkin-overlay');
   if (existing) existing.remove();
@@ -1497,7 +1490,7 @@ function showCheckinCard(cardId, name, totalPts, isSlotUnlock) {
   overlay.id        = 'checkin-overlay';
   overlay.className = 'cc-overlay';
   overlay.innerHTML =
-    '<div class="cc-card" style="background:' + bgGrad + '">' +
+    '<div class="cc-card" style="background:linear-gradient(160deg,#e0f8ff,#f0e8ff,#e8fff4)">' +
       '<div class="cc-avatar">' + getEmoji(cardId) + '</div>' +
       '<div class="cc-name">'   + name + '</div>' +
       '<div class="cc-card-id">' + cardId + '</div>' +
@@ -1506,11 +1499,6 @@ function showCheckinCard(cardId, name, totalPts, isSlotUnlock) {
         '<span class="cc-pts-label"> 點</span>' +
       '</div>' +
       '<div class="cc-stars">' + stars + '</div>' +
-      unlockHTML +
-      '<div class="cc-progress">' +
-        '<div class="cc-progress-bar" style="width:' + progressPct + '%"></div>' +
-      '</div>' +
-      '<div class="cc-progress-label">距離下次拉霸還需 ' + ptsToNext + ' 點</div>' +
       '<div class="cc-dismiss">✨ 繼續加油！✨</div>' +
     '</div>';
 
@@ -1521,12 +1509,7 @@ function showCheckinCard(cardId, name, totalPts, isSlotUnlock) {
     overlay.classList.remove('cc-show');
     setTimeout(() => {
       overlay.remove();
-      if (isSlotUnlock) {
-        showPage('slot');
-        const inp = el('slot-card-input');
-        if (inp) inp.value = cardId;
-        lookupSlotCard();
-      } else {
+      {
         const inp2 = el('card-input');
         if (inp2) inp2.focus();
       }
@@ -1963,6 +1946,11 @@ function initDragDrop() {
 }
 
 // ── Slot Machine ──
+function twHourLocal() {
+  const tw = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  return tw.getUTCHours();
+}
+
 function updateSlotUI() {
   if (!slotCardId) return;
 
@@ -1970,6 +1958,8 @@ function updateSlotUI() {
   const hasWonToday  = slotStatus ? slotStatus.hasWonToday  : false;
   const drawDone     = slotStatus ? slotStatus.drawDone     : false;
   const totalEntries = slotStatus ? slotStatus.totalEntries : 0;
+  const h            = twHourLocal();
+  const isOpen       = h >= 13 && h < 20;
 
   if (el('slot-pts-num'))   el('slot-pts-num').textContent   = totalEntries;
   if (el('slot-plays-num')) el('slot-plays-num').textContent = hasEntered ? '✓' : '—';
@@ -1980,7 +1970,9 @@ function updateSlotUI() {
     } else if (drawDone) {
       el('slot-card-sub').textContent = '今日抽獎已結束，明天再來！';
     } else if (hasEntered) {
-      el('slot-card-sub').textContent = '✅ 已報名今日抽獎，等待結果！';
+      el('slot-card-sub').textContent = '✅ 已報名今日抽獎，等待抽獎結果！';
+    } else if (!isOpen) {
+      el('slot-card-sub').textContent = '報名時間：台灣時間 13:00–20:00';
     } else {
       el('slot-card-sub').textContent = '尚未報名，按下按鈕參加今日抽獎！';
     }
@@ -1990,10 +1982,10 @@ function updateSlotUI() {
   fetch(API_BASE + '/api/slot/daily')
     .then(r => r.json())
     .then(d => {
-      const totalWins = d.totalWins;
-      const pct = Math.max(0, (totalWins / MAX_DAILY_WINS) * 100);
+      const remaining = d.remainingPrizes;
+      const pct = Math.max(0, (remaining / MAX_DAILY_WINS) * 100);
       if (el('slot-daily-fill'))  el('slot-daily-fill').style.width = pct + '%';
-      if (el('slot-daily-count')) el('slot-daily-count').textContent = totalWins + ' / ' + MAX_DAILY_WINS;
+      if (el('slot-daily-count')) el('slot-daily-count').textContent = (MAX_DAILY_WINS - remaining) + ' / ' + MAX_DAILY_WINS;
 
       const btn = el('slot-pull-btn');
       if (btn) {
@@ -2006,6 +1998,9 @@ function updateSlotUI() {
         } else if (hasEntered) {
           btn.disabled = true;
           btn.textContent = '✅ 已報名（等待抽獎）';
+        } else if (!isOpen) {
+          btn.disabled = true;
+          btn.textContent = '報名時間 13:00–20:00';
         } else {
           btn.disabled = false;
           btn.textContent = '🎰 點擊報名今日抽獎！';
