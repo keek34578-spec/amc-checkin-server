@@ -1952,6 +1952,8 @@ function updateSlotUI() {
   const totalPts       = slotStatus ? slotStatus.totalPts       : 0;
   const availablePlays = slotStatus ? slotStatus.availablePlays : 0;
   const hasWonToday    = slotStatus ? slotStatus.hasWonToday    : false;
+  const canWin         = slotStatus ? slotStatus.canWin         : true;
+  const winCount       = slotStatus ? slotStatus.winCount       : 0;
   const h              = twHourLocal();
   const isOpen         = h >= 13 && h < 20;
 
@@ -1959,19 +1961,18 @@ function updateSlotUI() {
   if (el('slot-plays-num')) el('slot-plays-num').textContent = availablePlays;
 
   if (el('slot-card-sub')) {
-    if (availablePlays > 0) {
-      const sub = hasWonToday
-        ? '🍦 已中獎！還有 ' + availablePlays + ' 次機會繼續抽！'
+    if (!canWin) {
+      el('slot-card-sub').textContent = '趕快再繼續集點抽獎吧！';
+    } else if (availablePlays > 0) {
+      el('slot-card-sub').textContent = hasWonToday
+        ? '🍦 已中獎 ' + winCount + ' 次！還有 ' + availablePlays + ' 次機會繼續抽！'
         : '積點 ' + totalPts + ' 點 → 可抽 ' + availablePlays + ' 次（每 ' + COST_PER_PLAY + ' 點換 1 次）';
-      el('slot-card-sub').textContent = sub;
     } else if (!isOpen) {
       el('slot-card-sub').textContent = '活動時間：台灣時間 13:00–20:00';
     } else {
-      const ptsToNext = totalPts % COST_PER_PLAY === 0 && totalPts > 0
-        ? COST_PER_PLAY
-        : COST_PER_PLAY - (totalPts % COST_PER_PLAY);
+      const ptsToNext = COST_PER_PLAY - (totalPts % COST_PER_PLAY || COST_PER_PLAY);
       el('slot-card-sub').textContent = hasWonToday
-        ? '🍦 今日已中獎！刷卡再累積 ' + ptsToNext + ' 點可再抽'
+        ? '🍦 已中獎 ' + winCount + ' 次！刷卡再累積 ' + ptsToNext + ' 點可再抽'
         : '積點 ' + totalPts + ' 點，再刷 ' + ptsToNext + ' 點可抽獎！';
     }
   }
@@ -1996,6 +1997,9 @@ function updateSlotUI() {
         } else if (availablePlays <= 0) {
           btn.disabled = true;
           btn.textContent = totalPts < COST_PER_PLAY ? '積點不足，繼續刷卡！' : '今日次數已用完';
+        } else if (!canWin) {
+          btn.disabled = false;
+          btn.textContent = '未中獎，請繼續加油';
         } else {
           btn.disabled = false;
           btn.textContent = '🎰 拉霸！PULL！（還有 ' + availablePlays + ' 次）';

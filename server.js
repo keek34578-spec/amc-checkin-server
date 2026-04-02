@@ -257,15 +257,15 @@ app.delete('/api/records', (req, res) => {
 });
 
 // ── API: Lottery (加權抽獎) ────────────────────────
-const MAX_DAILY_WINS  = 20;
-const COST_PER_PLAY   = 5;    // 每 5 點換 1 次
-const BASE_WIN_PROB   = 0.25; // 從未中獎者的基礎中獎率（25%）
+const MAX_DAILY_WINS      = 20;  // 全體每日上限
+const MAX_WINS_PER_PERSON = 2;   // 每人累計最多中獎次數
+const COST_PER_PLAY       = 5;   // 每 5 點換 1 次
 
-// 權重：未中獎=100，中過1次=20，中過2次以上=5
-function getWeight(winCount) {
-  if (winCount === 0) return 100;
-  if (winCount === 1) return 20;
-  return 5;
+// 中獎機率（依累計中獎次數）
+function getWinProb(histWins) {
+  if (histWins === 0) return 0.12;  // 0 勝 → 12%
+  if (histWins === 1) return 0.05;  // 1 勝 → 5%
+  return 0;                         // 2 勝以上 → 0%（可參加但不中獎）
 }
 
 // 加權隨機抽取 count 名，不重複
@@ -302,6 +302,7 @@ app.get('/api/slot/status/:cardId', (req, res) => {
   const { todayCnt }  = db.prepare('SELECT COUNT(*) as todayCnt FROM slot_wins WHERE card_id = ? AND win_date = ?').get(cardId, date);
   const { histWins }  = db.prepare('SELECT COUNT(*) as histWins FROM slot_wins WHERE card_id = ?').get(cardId);
   const { totalWins } = db.prepare('SELECT COUNT(*) as totalWins FROM slot_wins WHERE win_date = ?').get(date);
+  const canWin        = histWins < MAX_WINS_PER_PERSON;  // 2 勝以上中獎率 0%
 
   res.json({
     totalPts:        total,
@@ -310,7 +311,8 @@ app.get('/api/slot/status/:cardId', (req, res) => {
     earnedPlays,
     hasWonToday:     todayCnt > 0,
     winCount:        histWins,
-    weight:          getWeight(histWins),
+    winProb:         getWinProb(histWins),
+    canWin,
     remainingPrizes: Math.max(0, MAX_DAILY_WINS - totalWins),
     totalWins
   });
@@ -349,11 +351,11 @@ app.post('/api/slot/play', (req, res) => {
     ON CONFLICT(card_id, play_date) DO UPDATE SET count = count + 1
   `).run(cardId, date);
 
-  // 加權中獎判斷
+  // 加權中獎判斷（超過個人上限直接不中）
   const { histWins } = db.prepare('SELECT COUNT(*) as histWins FROM slot_wins WHERE card_id = ?').get(cardId);
-  const weight   = getWeight(histWins);
-  const winProb  = BASE_WIN_PROB * (weight / 100);
-  const isWin    = Math.random() < winProb;
+  const canWin   = histWins < MAX_WINS_PER_PERSON;
+  const winProb  = getWinProb(histWins);
+  const isWin    = canWin && (Math.random() < winProb);
 
   // 剩餘次數（扣完後）
   const newAvailable = Math.max(0, earnedPlays - usedPlays - 1);
