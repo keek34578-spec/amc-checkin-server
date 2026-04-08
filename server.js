@@ -325,11 +325,8 @@ app.post('/api/slot/play', (req, res) => {
     return res.status(400).json({ error: 'no_plays', message: '沒有可用次數，繼續刷卡累積積點！' });
   }
 
-  // [FIX #2] 已達個人上限，直接攔截，不扣次數
+  // 已中獎2次者 getWinProb 回傳 0，isWin 永遠 false，仍可正常拉霸並消耗次數
   const { histWins } = db.prepare('SELECT COUNT(*) as histWins FROM slot_wins WHERE card_id = ?').get(cardId);
-  if (histWins >= MAX_WINS_PER_PERSON) {
-    return res.status(400).json({ error: 'max_wins', message: '你已達累計中獎上限，感謝參與！' });
-  }
 
   // [FIX #1] 全天上限
   const { dailyWins } = db.prepare('SELECT COUNT(*) as dailyWins FROM slot_wins WHERE win_date = ?').get(date);
