@@ -402,13 +402,6 @@ app.get('/api/slot/daily', (req, res) => {
   });
 });
 
-// ── Temp debug: check win_time format ─────────────
-app.get('/debug/wintime', (req, res) => {
-  const rows = db.prepare(
-    'SELECT id, card_id, win_date, win_time FROM slot_wins ORDER BY id DESC LIMIT 5'
-  ).all();
-  res.json(rows);
-});
 
 // ── Health check ───────────────────────────────────
 app.get('/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
