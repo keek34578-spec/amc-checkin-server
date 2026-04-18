@@ -274,7 +274,10 @@ app.get('/api/slot/status/:cardId', (req, res) => {
   const remainingPrizes = Math.max(0, MAX_DAILY_WINS - wins);
 
   // This card's total wins (all-time, for probability tier)
-  const { totalWins } = db.prepare('SELECT COUNT(*) as totalWins FROM slot_wins WHERE card_id = ?').get(cardId);
+
+  const { totalWins } = db.prepare('SELECT COUNT(*) as totalWins FROM slot_wins WHERE card_id = ? AND win_date >= ?').get(cardId, '2026-04-01');
+
+
 
   // Has this card won today?
   const winRow = db.prepare('SELECT COUNT(*) as cnt FROM slot_wins WHERE card_id = ? AND win_date = ?').get(cardId, date);
@@ -309,7 +312,9 @@ app.post('/api/slot/play', (req, res) => {
   if (dailyWins >= MAX_DAILY_WINS) return res.status(400).json({ error: 'no_prizes', message: '今日獎品已送完' });
 
   // This card's total wins
-  const { totalWins } = db.prepare('SELECT COUNT(*) as totalWins FROM slot_wins WHERE card_id = ?').get(cardId);
+
+  const { totalWins } = db.prepare('SELECT COUNT(*) as totalWins FROM slot_wins WHERE card_id = ? AND win_date >= ?').get(cardId, '2026-04-01');
+
 
   // Deduct one play BEFORE deciding win (prevents retry abuse)
   db.prepare(`
